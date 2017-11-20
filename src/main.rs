@@ -109,7 +109,7 @@ impl World {
     }
 
 	fn spaceship_world_state_generator(grid_position: Position) -> CellState {
-		let spaceship = vec![
+        let spaceship = vec![
             Position { x: 1, y: 0 },
             Position { x: 2, y: 0 },
             Position { x: 3, y: 0 },
