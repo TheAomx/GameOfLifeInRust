@@ -108,7 +108,7 @@ impl World {
         World::get_cell_state_in_vector(&all_gliders, &grid_position)
     }
 
-	fn spaceship_world_state_generator(grid_position: Position) -> CellState {
+    fn spaceship_world_state_generator(grid_position: Position) -> CellState {
         let spaceship = vec![
             Position { x: 1, y: 0 },
             Position { x: 2, y: 0 },
