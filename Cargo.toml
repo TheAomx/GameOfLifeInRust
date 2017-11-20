@@ -1,0 +1,8 @@
+[package]
+
+name = "game_of_life"
+version = "0.0.1"
+authors = [ "Your name <you@example.com>"  ]
+
+[dependencies]
+rand = "0.3"
