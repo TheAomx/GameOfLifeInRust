@@ -23,17 +23,22 @@ struct Position {
     y: i32,
 }
 
-#[derive(Copy, Clone)]
-struct Dimension {
-    width: i32,
-    height: i32,
+impl Position {
+    fn shift (&self, factor: &Position) -> Position {
+        Position { x: self.x + factor.x, y: self.y + factor.y}
+    }
 }
-
 
 impl PartialEq for Position {
     fn eq(&self, other: &Position) -> bool {
         self.x == other.x && self.y == other.y
     }
+}
+
+#[derive(Copy, Clone)]
+struct Dimension {
+    width: i32,
+    height: i32,
 }
 
 #[derive(Clone)]
@@ -69,6 +74,10 @@ impl World {
         World::create_initial_world(dimension, &World::glider_world_state_generator)
     }
 
+    fn create_spaceship_world(dimension: &Dimension) -> World {
+        World::create_initial_world(dimension, &World::spaceship_world_state_generator)
+    }
+
     fn dead_world_state_generator(_grid_position: Position) -> CellState {
         CellState::DEAD
     }
@@ -83,7 +92,7 @@ impl World {
     }
 
     fn glider_world_state_generator(grid_position: Position) -> CellState {
-        let one_glider = vec![
+        let glider = vec![
             Position { x: 0, y: 1 },
             Position { x: 1, y: 2 },
             Position { x: 2, y: 0 },
@@ -91,11 +100,51 @@ impl World {
             Position { x: 2, y: 2 },
         ];
 
-        let some_cell = one_glider.iter().find(|&&cell| grid_position == cell);
+        let offsets = vec![Position {x: 0, y: 8}, Position {x: 0, y: 2}, 
+                           Position {x: 8, y: 8}, Position {x: 8, y: 2},
+                           Position {x: 15, y: 8}, Position {x: 15, y: 2},];
+		let all_gliders = World::apply_offsets_to_shape (&glider, &offsets);
+
+        World::get_cell_state_in_vector(&all_gliders, &grid_position)
+    }
+
+	fn spaceship_world_state_generator(grid_position: Position) -> CellState {
+		let spaceship = vec![
+            Position { x: 1, y: 0 },
+            Position { x: 2, y: 0 },
+            Position { x: 3, y: 0 },
+            Position { x: 4, y: 0 },
+            Position { x: 0, y: 1 },
+            Position { x: 4, y: 1 },
+            Position { x: 4, y: 2 },
+            Position { x: 0, y: 3 },
+            Position { x: 3, y: 3 },
+        ];
+
+        let offsets = vec![Position {x: 0, y: 8}, Position {x: 0, y: 2}, 
+                           Position {x: 8, y: 8}, Position {x: 8, y: 2}];
+		let all_spaceships = World::apply_offsets_to_shape (&spaceship, &offsets);
+
+        World::get_cell_state_in_vector(&all_spaceships, &grid_position)
+    }
+
+    fn get_cell_state_in_vector(vector: &Vec<Position>, position: &Position) -> CellState {
+        let some_cell = vector.iter().find(|&cell| position == cell);
         match some_cell {
             Some(_cell) => CellState::ALIVE,
             None => CellState::DEAD,
         }
+    }
+
+    fn apply_offsets_to_shape (shape: &Vec<Position>, offsets: &Vec<Position>) -> Vec<Position> {
+        let mut positions = vec![];
+
+        for offset in offsets {
+             let shape_with_offset : Vec<Position> = shape.iter().map(|&position| position.shift(&offset)).collect();
+             positions.extend(shape_with_offset);
+        }
+
+        positions
     }
 
     fn get_cell_in_world(&self, position: &Position) -> Option<Cell> {
