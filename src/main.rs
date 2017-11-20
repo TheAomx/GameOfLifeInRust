@@ -103,7 +103,7 @@ impl World {
         let offsets = vec![Position {x: 0, y: 8}, Position {x: 0, y: 2}, 
                            Position {x: 8, y: 8}, Position {x: 8, y: 2},
                            Position {x: 15, y: 8}, Position {x: 15, y: 2},];
-		let all_gliders = World::apply_offsets_to_shape (&glider, &offsets);
+        let all_gliders = World::apply_offsets_to_shape (&glider, &offsets);
 
         World::get_cell_state_in_vector(&all_gliders, &grid_position)
     }
@@ -123,7 +123,7 @@ impl World {
 
         let offsets = vec![Position {x: 0, y: 8}, Position {x: 0, y: 2}, 
                            Position {x: 8, y: 8}, Position {x: 8, y: 2}];
-		let all_spaceships = World::apply_offsets_to_shape (&spaceship, &offsets);
+        let all_spaceships = World::apply_offsets_to_shape (&spaceship, &offsets);
 
         World::get_cell_state_in_vector(&all_spaceships, &grid_position)
     }
