@@ -2,9 +2,11 @@ extern crate rand;
 
 use rand::Rng;
 use std::{thread, time};
+use std::collections::HashMap;
 
-const WIDTH: i32 = 40;
-const HEIGHT: i32 = 15;
+
+const WIDTH: i32 = 60;
+const HEIGHT: i32 = 18;
 
 #[derive(Copy, Clone)]
 enum CellState {
@@ -17,7 +19,7 @@ struct Cell {
     state: CellState,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, Hash)]
 struct Position {
     x: i32,
     y: i32,
@@ -42,20 +44,19 @@ struct Dimension {
 }
 
 struct World {
-    cells: Vec<(Position, Cell)>,
+    cells: HashMap<Position, Cell>,
     dimension: Dimension,
 }
 
 impl World {
-    fn create_initial_world(dimension: Dimension, state_generator: &Fn(&Position) -> CellState) -> World {
-        let mut world = World { cells: Vec::new(), dimension: dimension };
+    fn create_initial_world(dimension: Dimension, state_generator: &Fn(&Dimension, &Position) -> CellState) -> World {
+        let mut world = World { cells: HashMap::new(), dimension: dimension };
         for y in 0..world.dimension.height {
             for x in 0..world.dimension.width {
                 let position = Position { x: x, y: y };
-                world.cells.push((
-                    position,
-                    Cell { state: state_generator(&position) },
-                ));
+                world.cells.insert(position,
+                    Cell { state: state_generator(&world.dimension, &position) }
+                );
             }
         }
 
@@ -78,11 +79,15 @@ impl World {
         World::create_initial_world(dimension, &World::spaceship_world_state_generator)
     }
 
-    fn dead_world_state_generator(_grid_position: &Position) -> CellState {
+    fn create_big_crunch_world(dimension: Dimension) -> World {
+        World::create_initial_world(dimension, &World::big_crunch_world_state_generator)
+    }
+
+    fn dead_world_state_generator(_dimension: &Dimension, _grid_position: &Position) -> CellState {
         CellState::DEAD
     }
 
-    fn random_world_state_generator(_grid_position: &Position) -> CellState {
+    fn random_world_state_generator(_dimension: &Dimension, _grid_position: &Position) -> CellState {
         let mut rng = rand::thread_rng();
         if rng.gen() {
             CellState::ALIVE
@@ -91,7 +96,7 @@ impl World {
         }
     }
 
-    fn glider_world_state_generator(grid_position: &Position) -> CellState {
+    fn glider_world_state_generator(_dimension: &Dimension, grid_position: &Position) -> CellState {
         let glider = vec![
             Position { x: 0, y: 1 },
             Position { x: 1, y: 2 },
@@ -108,7 +113,7 @@ impl World {
         World::get_cell_state_in_vector(&all_gliders, grid_position)
     }
 
-    fn spaceship_world_state_generator(grid_position: &Position) -> CellState {
+    fn spaceship_world_state_generator(_dimension: &Dimension, grid_position: &Position) -> CellState {
         let spaceship = vec![
             Position { x: 1, y: 0 },
             Position { x: 2, y: 0 },
@@ -126,6 +131,31 @@ impl World {
         let all_spaceships = World::apply_offsets_to_shape (&spaceship, &offsets);
 
         World::get_cell_state_in_vector(&all_spaceships, grid_position)
+    }
+
+    fn big_crunch_world_state_generator(dimension: &Dimension, grid_position: &Position) -> CellState {
+        let big_crunch_initial_state = vec![
+            Position { x: 0, y: 0 },
+            Position { x: 1, y: 0 },
+            Position { x: 2, y: 0 },
+            Position { x: 0, y: 1 },
+            Position { x: 0, y: 2 },
+            Position { x: 2, y: 1 },
+            Position { x: 2, y: 2 },
+
+            Position { x: 0, y: 6 },
+            Position { x: 1, y: 6 },
+            Position { x: 2, y: 6 },
+            Position { x: 0, y: 4 },
+            Position { x: 0, y: 5 },
+            Position { x: 2, y: 4 },
+            Position { x: 2, y: 5 },
+        ];
+
+        let offsets = vec![Position {x: (dimension.width/2)-2, y: dimension.height/2-3}];
+        let big_crunch_initial_state = World::apply_offsets_to_shape (&big_crunch_initial_state, &offsets);
+
+        World::get_cell_state_in_vector(&big_crunch_initial_state, grid_position)
     }
 
     fn get_cell_state_in_vector(vector: &Vec<Position>, position: &Position) -> CellState {
@@ -147,16 +177,8 @@ impl World {
         positions
     }
 
-    fn get_cell_in_world(&self, position: &Position) -> Option<Cell> {
-        let callback = |entry: &&(Position, Cell)| {
-            let ref cell_position = entry.0;
-            position.x == cell_position.x && position.y == cell_position.y
-        };
-
-        match self.cells.iter().find(callback) {
-            Some(entry) => Some(entry.1),
-            None => None,
-        }
+    fn get_cell_in_world(&self, position: &Position) -> Option<&Cell> {
+        self.cells.get(position)
     }
 
     fn get_neighbor_count(&self, position: &Position) -> i32 {
@@ -213,10 +235,10 @@ impl World {
     }
 
     fn populate(&self) -> World {
-        let mut new_cells: Vec<(Position, Cell)> = vec![];
-        for &(ref position, ref cell) in self.cells.iter() {
+        let mut new_cells: HashMap<Position, Cell> = HashMap::new();
+        for (position, cell) in self.cells.iter() {
             let new_cell = Cell { state: self.get_new_cell_state(cell, &position) };
-            new_cells.push((position.clone(), new_cell));
+            new_cells.insert(position.clone(), new_cell);
         }
 
         return World { cells: new_cells, dimension: self.dimension.clone() };
@@ -239,15 +261,24 @@ impl World {
         }
 
         print_bar(self.dimension.width);
-        for &(ref position, ref cell) in self.cells.iter() {
-            if position.x == 0 {
-                print!("|");
-            }
 
-            print_cell(cell);
+        for y in 0..self.dimension.height {
+            for x in 0..self.dimension.width {
+                let position = Position { x: x, y: y };
+                let cell = match self.get_cell_in_world(&position) {
+                    Some(cell) => cell,
+                    None =>{panic!("get_cell_in_world returned None!")},
+                };
 
-            if position.x == self.dimension.width - 1 {
-                println!("|");
+                if position.x == 0 {
+                    print!("|");
+                }
+
+                print_cell(cell);
+
+                if position.x == self.dimension.width - 1 {
+                    println!("|");
+                }
             }
         }
 
@@ -262,7 +293,7 @@ fn simulate_game_of_life(num_iterations: usize) -> Vec<Box<World>> {
     };
 
     let mut worlds: Vec<Box<World>> =
-        vec![Box::new(World::create_random_world(dimension))];
+        vec![Box::new(World::create_spaceship_world(dimension))];
 
     for x in 1..num_iterations {
         let populated_world = worlds[x-1].populate();
@@ -273,7 +304,7 @@ fn simulate_game_of_life(num_iterations: usize) -> Vec<Box<World>> {
 }
 
 fn main() {
-    let num_iterations: usize = 100;
+    let num_iterations: usize = 200;
     let worlds = simulate_game_of_life(num_iterations);
 
     for world in worlds.iter() {
