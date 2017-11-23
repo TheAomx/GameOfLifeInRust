@@ -44,14 +44,35 @@ impl Dimension {
     }
 }
 
+#[derive(Clone)]
+pub struct GameRule {
+    // if any cell has exactly these number of neighbors and is alive the cell survives
+    surviving_cell_rule: Vec<i32>,
+    // if any cell has exactly these number of neighbors and is dead the cell is born
+    born_cell_rule: Vec<i32>,
+    // in any other case the cell dies or stays dead
+}
+
+
+impl GameRule {
+    pub fn new(surviving_cell_rule: Vec<i32>, born_cell_rule: Vec<i32>) -> GameRule {
+        GameRule { surviving_cell_rule: surviving_cell_rule, born_cell_rule: born_cell_rule }
+    }
+
+    pub fn default_rule() -> GameRule {
+        GameRule::new( vec![2,3], vec![3])
+    }
+}
+
 pub struct World {
     cells: HashMap<Position, Cell>,
     dimension: Dimension,
+    rule: GameRule,
 }
 
 impl World {
     pub fn create_initial_world(dimension: Dimension, state_generator: &Fn(&Dimension, &Position) -> CellState) -> World {
-        let mut world = World { cells: HashMap::new(), dimension: dimension };
+        let mut world = World { cells: HashMap::new(), dimension: dimension, rule: GameRule::default_rule() };
         for y in 0..world.dimension.height {
             for x in 0..world.dimension.width {
                 let position = Position { x: x, y: y };
@@ -62,6 +83,10 @@ impl World {
         }
 
         world
+    }
+
+    pub fn set_rule (&mut self, rule: GameRule) {
+        self.rule = rule;
     }
 
     pub fn create_random_world(dimension: Dimension) -> World {
@@ -108,7 +133,9 @@ impl World {
 
         let offsets = vec![Position {x: 0, y: 8}, Position {x: 0, y: 2}, 
                            Position {x: 8, y: 8}, Position {x: 8, y: 2},
-                           Position {x: 15, y: 8}, Position {x: 15, y: 2},];
+                           Position {x: 15, y: 8}, Position {x: 15, y: 2},
+                           Position {x: 22, y: 8}, Position {x: 22, y: 2},
+                           ];
         let all_gliders = World::apply_offsets_to_shape (&glider, &offsets);
 
         World::get_cell_state_in_vector(&all_gliders, grid_position)
@@ -219,17 +246,15 @@ impl World {
         let num_neigbors = self.get_num_neigbors_for_cell(position);
         match cell.state {
             CellState::ALIVE => {
-                if num_neigbors == 2 || num_neigbors == 3 {
-                    CellState::ALIVE
-                } else {
-                    CellState::DEAD
+                match self.rule.surviving_cell_rule.iter().find(|&&x| num_neigbors == x) {
+                    Some (_x) => CellState::ALIVE,
+                    None      => CellState::DEAD,
                 }
             }
             CellState::DEAD => {
-                if num_neigbors == 3 {
-                    CellState::ALIVE
-                } else {
-                    CellState::DEAD
+                match self.rule.born_cell_rule.iter().find(|&&x| num_neigbors == x) {
+                    Some (_x) => CellState::ALIVE,
+                    None      => CellState::DEAD,
                 }
             }
         }
@@ -242,7 +267,7 @@ impl World {
             new_cells.insert(position.clone(), new_cell);
         }
 
-        return World { cells: new_cells, dimension: self.dimension.clone() };
+        return World { cells: new_cells, dimension: self.dimension.clone(), rule: self.rule.clone() };
     }
 
     pub fn print(&self) {
@@ -266,10 +291,7 @@ impl World {
         for y in 0..self.dimension.height {
             for x in 0..self.dimension.width {
                 let position = Position { x: x, y: y };
-                let cell = match self.get_cell_in_world(&position) {
-                    Some(cell) => cell,
-                    None => {panic!("get_cell_in_world returned None!")},
-                };
+                let cell = self.get_cell_in_world(&position).unwrap();
 
                 if position.x == 0 {
                     print!("|");
