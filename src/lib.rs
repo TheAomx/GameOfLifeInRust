@@ -72,7 +72,10 @@ pub struct World {
 
 impl World {
     pub fn create_initial_world(dimension: Dimension, state_generator: &Fn(&Dimension, &Position) -> CellState) -> World {
-        let mut world = World { cells: HashMap::new(), dimension: dimension, rule: GameRule::default_rule() };
+        let capacity = dimension.width * dimension.height;
+        let mut world = World { cells: HashMap::with_capacity(capacity as usize),
+                                dimension: dimension, rule: GameRule::default_rule() };
+
         for y in 0..world.dimension.height {
             for x in 0..world.dimension.width {
                 let position = Position { x: x, y: y };
