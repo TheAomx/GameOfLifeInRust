@@ -10,8 +10,8 @@ fn simulate_game_of_life(num_iterations: usize) -> Vec<Box<World>> {
     let dimension = Dimension::new(WIDTH, HEIGHT);
     let mut initial_world = World::create_random_world(dimension);
     initial_world.set_rule(GameRule::default_rule());
-    let mut worlds: Vec<Box<World>> =
-        vec![Box::new(initial_world)];
+    let mut worlds: Vec<Box<World>> = Vec::with_capacity(num_iterations);
+    worlds.push(Box::new(initial_world));
 
     for x in 1..num_iterations {
         let populated_world = worlds[x-1].populate();
