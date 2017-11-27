@@ -6,3 +6,4 @@ authors = [ "Your name <you@example.com>"  ]
 
 [dependencies]
 rand = "0.3"
+termion = "*"

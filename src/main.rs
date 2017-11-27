@@ -1,13 +1,25 @@
 extern crate game_of_life;
-
-const WIDTH: i32 = 40;
-const HEIGHT: i32 = 20;
+extern crate termion;
 
 use game_of_life::{World, Dimension, GameRule};
 use std::{thread, time};
 
+fn get_world_dimension () -> Dimension {
+    const DEFAULT_WIDTH: i32 = 40;
+    const DEFAULT_HEIGHT: i32 = 20;
+
+    match termion::terminal_size() {
+        Ok(result) => {
+            let width = (result.0 - 2) as i32;
+            let height = (result.1 - 3) as i32;
+            Dimension::new(width, height)
+        },
+        Err(_err)  => Dimension::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+    }
+}
+
 fn simulate_game_of_life(num_iterations: usize) -> Vec<Box<World>> {
-    let dimension = Dimension::new(WIDTH, HEIGHT);
+    let dimension = get_world_dimension();
     let mut initial_world = World::create_random_world(dimension);
     initial_world.set_rule(GameRule::default_rule());
     let mut worlds: Vec<Box<World>> = Vec::with_capacity(num_iterations);
@@ -27,7 +39,6 @@ fn main() {
 
     for world in worlds.iter() {
         world.print();
-        println!("");
         let sleep_time = time::Duration::from_millis(100);
         thread::sleep(sleep_time);
     }

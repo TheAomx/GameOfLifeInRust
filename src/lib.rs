@@ -1,4 +1,5 @@
 extern crate rand;
+extern crate termion;
 
 use rand::Rng;
 use std::collections::HashMap;
@@ -288,6 +289,8 @@ impl World {
                 CellState::DEAD => print!(" "),
             }
         }
+
+        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
 
         print_bar(self.dimension.width);
 
