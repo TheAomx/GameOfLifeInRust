@@ -10,8 +10,9 @@ fn get_world_dimension () -> Dimension {
 
     match termion::terminal_size() {
         Ok(result) => {
-            let width = (result.0 - 2) as i32;
-            let height = (result.1 - 3) as i32;
+            let (cols, rows) = result;
+            let width = (cols - 2) as i32;
+            let height = (rows - 3) as i32;
             Dimension::new(width, height)
         },
         Err(_err)  => Dimension::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
@@ -38,6 +39,7 @@ fn main() {
     let worlds = simulate_game_of_life(num_iterations);
 
     for world in worlds.iter() {
+        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
         world.print();
         let sleep_time = time::Duration::from_millis(100);
         thread::sleep(sleep_time);
