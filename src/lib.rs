@@ -2,6 +2,8 @@ extern crate rand;
 
 use rand::Rng;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+
 
 #[derive(Copy, Clone)]
 pub enum CellState {
@@ -14,7 +16,7 @@ pub struct Cell {
     state: CellState,
 }
 
-#[derive(Copy, Clone, Eq, Hash)]
+#[derive(Copy, Clone, Eq)]
 pub struct Position {
     x: i32,
     y: i32,
@@ -23,6 +25,13 @@ pub struct Position {
 impl Position {
     fn shift (&self, factor: &Position) -> Position {
         Position { x: self.x + factor.x, y: self.y + factor.y}
+    }
+}
+
+impl Hash for Position {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.hash(state);
+        self.y.hash(state);
     }
 }
 
@@ -40,7 +49,7 @@ pub struct Dimension {
 
 impl Dimension {
     pub fn new(width: i32, height: i32) -> Dimension {
-        Dimension {width: width, height: height}
+        Dimension {width, height}
     }
 }
 
@@ -56,7 +65,7 @@ pub struct GameRule {
 
 impl GameRule {
     pub fn new(surviving_cell_rule: Vec<i32>, born_cell_rule: Vec<i32>) -> GameRule {
-        GameRule { surviving_cell_rule: surviving_cell_rule, born_cell_rule: born_cell_rule }
+        GameRule { surviving_cell_rule, born_cell_rule}
     }
 
     pub fn default_rule() -> GameRule {
@@ -71,14 +80,14 @@ pub struct World {
 }
 
 impl World {
-    pub fn create_initial_world(dimension: Dimension, state_generator: &Fn(&Dimension, &Position) -> CellState) -> World {
+    pub fn create_initial_world(dimension: Dimension, state_generator: &dyn Fn(&Dimension, &Position) -> CellState) -> World {
         let capacity = dimension.width * dimension.height;
         let mut world = World { cells: HashMap::with_capacity(capacity as usize),
-                                dimension: dimension, rule: GameRule::default_rule() };
+                                dimension, rule: GameRule::default_rule() };
 
         for y in 0..world.dimension.height {
             for x in 0..world.dimension.width {
-                let position = Position { x: x, y: y };
+                let position = Position { x, y };
                 world.cells.insert(position,
                     Cell { state: state_generator(&world.dimension, &position) }
                 );
@@ -189,7 +198,7 @@ impl World {
         World::get_cell_state_in_vector(&big_crunch_initial_state, grid_position)
     }
 
-    fn get_cell_state_in_vector(vector: &Vec<Position>, position: &Position) -> CellState {
+    fn get_cell_state_in_vector(vector: &[Position], position: &Position) -> CellState {
         let some_cell = vector.iter().find(|&cell| position == cell);
         match some_cell {
             Some(_cell) => CellState::ALIVE,
@@ -197,7 +206,7 @@ impl World {
         }
     }
 
-    fn apply_offsets_to_shape (shape: &Vec<Position>, offsets: &Vec<Position>) -> Vec<Position> {
+    fn apply_offsets_to_shape (shape: &[Position], offsets: &[Position]) -> Vec<Position> {
         let mut positions = vec![];
 
         for offset in offsets {
@@ -236,7 +245,7 @@ impl World {
             for y in start_y..end_y {
                 if x == position.x && y == position.y {
                 } else {
-                    let neighbor_position = Position { x: x, y: y };
+                    let neighbor_position = Position { x, y };
                     num_neigbors += self.get_neighbor_count(&neighbor_position);
                 }
             }
@@ -270,7 +279,7 @@ impl World {
             new_cells.insert(position.clone(), new_cell);
         }
 
-        return World { cells: new_cells, dimension: self.dimension.clone(), rule: self.rule.clone() };
+        World { cells: new_cells, dimension: self.dimension.clone(), rule: self.rule.clone() }
     }
 
     pub fn print(&self) {
@@ -279,7 +288,7 @@ impl World {
             for _i in 0..width {
                 print!("-");
             }
-            print!("|\n");
+            println!("|");
         }
 
         fn print_cell(cell: &Cell) {
@@ -293,7 +302,7 @@ impl World {
 
         for y in 0..self.dimension.height {
             for x in 0..self.dimension.width {
-                let position = Position { x: x, y: y };
+                let position = Position { x, y };
                 let cell = self.get_cell_in_world(&position).unwrap();
 
                 if position.x == 0 {

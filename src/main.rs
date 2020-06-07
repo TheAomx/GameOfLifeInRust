@@ -11,24 +11,24 @@ fn get_world_dimension () -> Dimension {
     match termion::terminal_size() {
         Ok(result) => {
             let (cols, rows) = result;
-            let width = (cols - 2) as i32;
-            let height = (rows - 3) as i32;
+            let width = i32::from(cols - 2);
+            let height = i32::from(rows - 3);
             Dimension::new(width, height)
         },
         Err(_err)  => Dimension::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
     }
 }
 
-fn simulate_game_of_life(num_iterations: usize) -> Vec<Box<World>> {
+fn simulate_game_of_life(num_iterations: usize) -> Vec<World> {
     let dimension = get_world_dimension();
     let mut initial_world = World::create_random_world(dimension);
     initial_world.set_rule(GameRule::default_rule());
-    let mut worlds: Vec<Box<World>> = Vec::with_capacity(num_iterations);
-    worlds.push(Box::new(initial_world));
+    let mut worlds: Vec<World> = Vec::with_capacity(num_iterations);
+    worlds.push(initial_world);
 
     for x in 1..num_iterations {
         let populated_world = worlds[x-1].populate();
-        worlds.push(Box::new(populated_world));
+        worlds.push(populated_world);
     }
 
     worlds
